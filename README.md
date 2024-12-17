@@ -9,7 +9,7 @@ Berikut adalah langkah-langkah untuk menjalankan project ini. Pastikan menggunak
 ### Copy or Clone the project
 
 ```bash
-git clone https://github.com/Vinzzztty/Forecasting-Hidroponik .
+git clone https://github.com/Vinzzztty/V2_Forecasting_Hidroponik.git .
 ```
 
 ### Buat virtual-environment terlebih dahulu
