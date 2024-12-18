@@ -355,3 +355,75 @@ def visualize_comparison(df, feature_a, feature_b):
 
     # Tampilkan plot di Streamlit
     st.plotly_chart(fig, use_container_width=True)
+
+
+def visualize_forecast_varible(forecast, target_variable, periods):
+    """
+    Visualize forecast results using Plotly.
+
+    Parameters:
+    - forecast: DataFrame with 'ds', 'yhat', 'yhat_lower', 'yhat_upper'.
+    - target_variable: Name of the variable being forecasted.
+    - periods: Number of forecast periods.
+
+    Returns:
+    - fig: A Plotly Figure object.
+    """
+    # Ensure required columns are present
+    required_columns = ["ds", "yhat", "yhat_lower", "yhat_upper"]
+    if not all(col in forecast.columns for col in required_columns):
+        raise ValueError(f"Forecast DataFrame must contain {required_columns}")
+
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Add forecasted values
+    fig.add_trace(
+        go.Scatter(
+            x=forecast["ds"],
+            y=forecast["yhat"],
+            mode="lines+markers",
+            name="Forecast",
+            line=dict(color="blue"),
+        )
+    )
+
+    # Add prediction intervals
+    fig.add_trace(
+        go.Scatter(
+            x=forecast["ds"],
+            y=forecast["yhat_upper"],
+            mode="lines",
+            name="Upper Bound",
+            line=dict(color="gray", dash="dot"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=forecast["ds"],
+            y=forecast["yhat_lower"],
+            mode="lines",
+            name="Lower Bound",
+            line=dict(color="gray", dash="dot"),
+            fill="tonexty",
+            fillcolor="rgba(128,128,128,0.2)",
+        )
+    )
+
+    # Customize the layout
+    fig.update_layout(
+        title=f"Forecast for {target_variable.capitalize()} ({periods} Days)",
+        xaxis_title="Date",
+        yaxis_title=target_variable.capitalize(),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        template="plotly_white",
+    )
+
+    return fig
+
+    # # Display the plot in Streamlit
+    # st.plotly_chart(fig, use_container_width=True)
+
+    # # Display the forecasted data in a table
+    # st.write(f"### Forecasted Data for {target_variable.capitalize()}")
+    # st.dataframe(forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]])

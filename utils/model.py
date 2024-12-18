@@ -30,6 +30,49 @@ def prepare_data(df):
     return df_prophet
 
 
+def prepare_data_with_target(df, target_column):
+    df_prophet = df[
+        [
+            "datetime",
+            "LeafCount",
+            "hole",
+            "temperature",
+            "humidity",
+            "light",
+            "pH",
+            "EC",
+            "TDS",
+            "WaterTemp",
+        ]
+    ].copy()
+
+    df_prophet.rename(columns={"datetime": "ds", target_column: "y"}, inplace=True)
+
+    df_prophet["ds"] = pd.to_datetime(df_prophet["ds"])
+
+    return df_prophet
+    df_prophet = df[
+        [
+            "datetime",
+            "LeafCount",
+            "hole",
+            "temperature",
+            "humidity",
+            "light",
+            "pH",
+            "EC",
+            "TDS",
+            "WaterTemp",
+        ]
+    ].copy()
+
+    df_prophet.rename(columns={"datetime": "ds", "WaterTemp": "y"}, inplace=True)
+
+    df_prophet["ds"] = pd.to_datetime(df_prophet["ds"])
+
+    return df_prophet
+
+
 def load_model(model_path):
     model_loaded = joblib.load(model_path)
 
@@ -50,6 +93,25 @@ def create_future_dataframe(df_test, periods):
         "EC",
         "TDS",
         "WaterTemp",
+    ]:
+        future[col] = last_row[col]
+    return future
+
+
+def create_future_dataframe_temperature(df_test, periods):
+    future_dates = pd.date_range(start=df_test["ds"].max(), periods=periods, freq="D")
+    last_row = df_test.iloc[-1]
+
+    future = pd.DataFrame({"ds": future_dates})
+    for col in [
+        "hole",
+        "humidity",
+        "light",
+        "pH",
+        "EC",
+        "TDS",
+        "WaterTemp",
+        "LeafCount",
     ]:
         future[col] = last_row[col]
     return future
@@ -146,3 +208,110 @@ def predict_pattern(model, input_data):
         )
 
     return prediction_label
+
+
+def use_saved_model_streamlit(df_test, load_model, periods):
+    """
+    Use a saved Prophet model to make predictions on test data and future periods in a Streamlit app.
+
+    Parameters:
+    - df_test: Test dataset (Pandas DataFrame with 'datetime' and 'y' columns)
+    - load_model: Path to the saved model
+    - periods: Number of periods for forecasting into the future
+
+    Returns:
+    - forecast: Forecast results as a DataFrame
+    """
+    # Load the saved Prophet model
+    model = joblib.load(load_model)
+    st.success(f"Loaded model from: {load_model}")
+
+    # Prepare the test data
+    df_test = df_test.copy()
+    df_test_resampled = df_test.resample("D").mean().reset_index()
+    df_test_resampled = df_test_resampled.rename(columns={"datetime": "ds"})
+
+    # Predict on the test dataset
+    test_forecast = model.predict(df_test_resampled[["ds"]])
+
+    # Future forecasting
+    future = model.make_future_dataframe(periods=periods, freq="D")
+    future_forecast = model.predict(future)
+
+    # Combine results
+    forecast = pd.concat([test_forecast, future_forecast]).reset_index(drop=True)
+
+    # Visualization in Streamlit
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+
+    # Add actual test data
+    fig.add_trace(
+        go.Scatter(
+            x=df_test_resampled["ds"],
+            y=df_test_resampled["y"],
+            mode="lines+markers",
+            name="Test Data (Actual)",
+            line=dict(color="green"),
+        )
+    )
+
+    # Add test forecast
+    fig.add_trace(
+        go.Scatter(
+            x=test_forecast["ds"],
+            y=test_forecast["yhat"],
+            mode="lines+markers",
+            name="Test Forecast",
+            line=dict(color="orange"),
+        )
+    )
+
+    # Add future forecast
+    fig.add_trace(
+        go.Scatter(
+            x=future_forecast["ds"],
+            y=future_forecast["yhat"],
+            mode="lines+markers",
+            name="Future Forecast",
+            line=dict(color="blue"),
+        )
+    )
+
+    # Add prediction intervals for the future forecast
+    fig.add_trace(
+        go.Scatter(
+            x=future_forecast["ds"],
+            y=future_forecast["yhat_upper"],
+            mode="lines",
+            name="Upper Bound",
+            line=dict(color="gray", dash="dot"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=future_forecast["ds"],
+            y=future_forecast["yhat_lower"],
+            mode="lines",
+            name="Lower Bound",
+            line=dict(color="gray", dash="dot"),
+            fill="tonexty",  # Fill between yhat_lower and yhat_upper
+            fillcolor="rgba(128,128,128,0.2)",
+        )
+    )
+
+    # Customize layout
+    fig.update_layout(
+        title=f"Forecast Using Model: {load_model}",
+        xaxis_title="Date",
+        yaxis_title="Value",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        template="plotly_white",
+    )
+
+    # Display the plot in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Return the forecast data
+    return forecast

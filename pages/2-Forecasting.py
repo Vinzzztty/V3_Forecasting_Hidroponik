@@ -134,8 +134,117 @@ def preprocess_data(df):
     return df[important_columns]
 
 
+def forecast_temperature(df, periods):
+    """Forecast temperature using the saved temperature model."""
+    df_temperature = model.prepare_data_with_target(df, "temperature")
+    model_temperature = model.load_model("./model/temperature_prophet_model.pkl")
+
+    # Dynamically set the cap based on domain knowledge or historical max
+    df_temperature["cap"] = 18
+
+    # Create a future dataframe for predictions
+    future_temperature = model_temperature.make_future_dataframe(
+        periods=periods, freq="D"
+    )
+    future_temperature["cap"] = 18
+    for feature in [
+        "hole",
+        "humidity",
+        "light",
+        "pH",
+        "EC",
+        "TDS",
+        "WaterTemp",
+        "LeafCount",
+    ]:
+        if feature in df_temperature:
+            future_temperature[feature] = df_temperature[feature].iloc[-1]
+
+    # Predict future temperature
+    forecast_temperature = model_temperature.predict(future_temperature)
+    st.subheader("📈 Temperature Forecast")
+    # st.dataframe(forecast_temperature)
+
+    # Visualize the forecast
+    fig_temperature = visualization.visualize_forecast_varible(
+        forecast_temperature, "temperature", periods
+    )
+    st.plotly_chart(fig_temperature)
+
+    return forecast_temperature
+
+
+def forecast_humidity(df, periods):
+    """Forecast humidity using the saved humidity model."""
+    df_humidity = model.prepare_data_with_target(df, "humidity")
+    model_humidity = model.load_model("./model/humidity_prophet_model.pkl")
+
+    # Dynamically set the cap based on domain knowledge or historical max
+    df_humidity["cap"] = 18
+
+    future_humidity = model_humidity.make_future_dataframe(periods=periods, freq="D")
+
+    future_humidity["cap"] = 18
+    for feature in [
+        "hole",
+        "temperature",
+        "light",
+        "pH",
+        "EC",
+        "TDS",
+        "WaterTemp",
+        "LeafCount",
+    ]:
+        future_humidity[feature] = df_humidity[feature].iloc[-1]
+
+    forecast_humidity = model_humidity.predict(future_humidity)
+    st.subheader("📈 Humidity Forecast")
+
+    fig_humidity = visualization.visualize_forecast_varible(
+        forecast_humidity, "humidity", periods
+    )
+    st.plotly_chart(fig_humidity)
+    return forecast_humidity
+
+
+def forecast_water_temp(df, periods):
+    """Forecast water temperature using the saved WaterTemp model."""
+    df_water_temp = model.prepare_data_with_target(df, "WaterTemp")
+    model_water_temp = model.load_model("./model/WaterTemp_prophet_model.pkl")
+
+    df_water_temp["cap"] = 18
+
+    future_water_temp = model_water_temp.make_future_dataframe(
+        periods=periods, freq="D"
+    )
+    future_water_temp["cap"] = 18
+
+    for feature in [
+        "hole",
+        "temperature",
+        "humidity",
+        "light",
+        "pH",
+        "EC",
+        "TDS",
+        "LeafCount",
+    ]:
+        future_water_temp[feature] = df_water_temp[feature].iloc[-1]
+
+    forecast_water_temp = model_water_temp.predict(future_water_temp)
+    st.subheader("📈 Water Temperature Forecast")
+
+    # st.dataframe(forecast_water_temp)
+
+    fig_water_temp = visualization.visualize_forecast_varible(
+        forecast_water_temp, "WaterTemp", periods
+    )
+    st.plotly_chart(fig_water_temp)
+    return forecast_water_temp
+
+
 def forecast_growth(df):
-    """Forecast the growth of leaves based on the model and user input."""
+    """Forecast the growth of leaves and temperature based on the model and user input."""
     df_prophet = model.prepare_data(df)
     models = model.load_model("./model/prophet_model.pkl")
 
@@ -145,6 +254,7 @@ def forecast_growth(df):
     with st.spinner(text="⏳ Sedang menganalisis..."):
         time.sleep(2)
 
+    # LeafCount forecast (requires 'cap' for logistic growth)
     future = models.make_future_dataframe(periods=unique_days, freq="D")
     for feature in [
         "hole",
@@ -157,9 +267,10 @@ def forecast_growth(df):
         "WaterTemp",
     ]:
         future[feature] = df_prophet[feature].iloc[-1]
-    future["cap"] = 18
-
+    future["cap"] = 18  # Required for logistic growth
     forecast = models.predict(future)
+
+    # Slider for forecasting periods
     max_periods = MAX_DAY - unique_days
     periods = st.slider(
         "⏳ Pilih hari untuk Forecasting pertumbuhan daun",
@@ -167,15 +278,19 @@ def forecast_growth(df):
         max_value=max_periods,
         step=1,
     )
+
+    # Create future dataframe for LeafCount prediction
     future = model.create_future_dataframe(df_prophet, periods=periods)
-    future["cap"] = 18
+    future["cap"] = 18  # Required for logistic growth
     forecast = model.make_predictions(models, future)
 
+    # Visualize LeafCount forecast
     st.markdown(""" --- """)
     st.markdown(f"### 📈 Hasil Forecasting untuk {periods} Hari Ke Depan")
     fig = visualization.plot_forecast(forecast, periods)
     st.plotly_chart(fig)
 
+    # Display LeafCount forecast results
     col1, col2 = st.columns([6, 4])
     with col1:
         periods = forecast["day"].max()
@@ -193,7 +308,11 @@ def forecast_growth(df):
         st.write(f"📋 Tabel Prediksi")
         st.dataframe(forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]])
 
-    return df_prophet, forecast
+    forecast_temp = forecast_temperature(df, periods)
+    forecast_hum = forecast_humidity(df, periods)
+    forecast_waterTemp = forecast_water_temp(df, periods)
+
+    return df_prophet, forecast, forecast_temp, forecast_hum, forecast_waterTemp
 
 
 def select_image_path(periods):
@@ -277,8 +396,31 @@ def main():
         if df is not None:
             st.markdown("### 📊 Data tanaman yang di Upload")
             st.dataframe(df)
-            df_prophet, forecast = forecast_growth(df)
+            df_prophet, forecast, forecast_temp, forecast_hum, forecast_waterTemp = (
+                forecast_growth(df)
+            )
+
+            forecasts = {
+                "temperature": forecast_temp,
+                "humidity": forecast_hum,
+                "WaterTemp": forecast_waterTemp,
+            }
+
             display_summary(df, df_prophet, forecast, periods=MAX_DAY)
+
+            ##
+            suggestions = cek_optimization.check_optimization_forecast_with_suggestions(
+                forecasts
+            )
+
+            # Display suggestions in Streamlit
+            st.markdown("### Saran Variabel Lingkungan")
+            if suggestions:
+                for suggestion in suggestions:
+                    st.write(suggestion)
+            else:
+                st.write("Tiidak ada Saran. Semua Nilai Variabel Sudah Optimal.")
+            ##
 
             st.markdown("### 🔎 Detail Variabel")
             selected_feature = st.selectbox(
