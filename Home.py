@@ -118,7 +118,7 @@ def main():
     # Content for the second column
     # with col2:
     st.image(
-        "https://github.com/Vinzzztty/Forecasting-Hidroponik/blob/V2/assets/evaluasi_model.png?raw=true",
+        "https://raw.githubusercontent.com/Vinzzztty/V3_Forecasting_Hidroponik/refs/heads/main/assets/evaluasi_model.png",
         caption="Evaluasi Model",
     )
 
