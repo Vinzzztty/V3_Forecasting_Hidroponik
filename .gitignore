@@ -7,3 +7,4 @@ main_backup.py
 __pycache__
 template.py
 document
+*.zip
