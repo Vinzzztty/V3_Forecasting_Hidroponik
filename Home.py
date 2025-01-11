@@ -108,8 +108,8 @@ def main():
         "Model forecasting menggunakan algoritma Prophet menghasilkan metrik evaluasi sebagai berikut:"
     )
 
-    st.markdown("- **RMSE (Root Mean Square Error)**: 1.66")
-    st.markdown("- **MAE (Mean Absolute Error)**: 1.26")
+    st.markdown("- **RMSE (Root Mean Square Error)**: 1.84")
+    st.markdown("- **MAE (Mean Absolute Error)**: 1.54")
 
     st.markdown(
         "Hasil menunjukkan bahwa model memiliki akurasi yang baik dengan kesalahan prediksi yang relatif rendah."
@@ -118,7 +118,7 @@ def main():
     # Content for the second column
     # with col2:
     st.image(
-        "https://raw.githubusercontent.com/Vinzzztty/V3_Forecasting_Hidroponik/refs/heads/main/assets/evaluasi_model.png",
+        "https://raw.githubusercontent.com/Vinzzztty/V3_Forecasting_Hidroponik/refs/heads/main/assets/evaluasi_model_latest.png",
         caption="Evaluasi Model",
     )
 
@@ -128,8 +128,8 @@ def main():
     # Data evaluasi model
     data = {
         "Model": ["ARIMA", "Prophet"],
-        "RMSE": [3.19, 1.66],
-        "MAE": [2.14, 1.26],
+        "RMSE": [3.19, 1.84],
+        "MAE": [2.14, 1.54],
     }
 
     # Membuat DataFrame
@@ -143,13 +143,13 @@ def main():
 
     with col2:
         st.image(
-            "https://github.com/Vinzzztty/Forecasting-Hidroponik/blob/V2/assets/perbandingan_model.png?raw=true",
+            "https://github.com/Vinzzztty/V3_Forecasting_Hidroponik/blob/main/assets/perbandingan_model_latest.png?raw=true",
             caption="Evaluasi Model",
         )
 
     st.header("🔍 Forecasting dengan Target Variable Lingkungan")
     st.image(
-        "https://github.com/Vinzzztty/V2_Forecasting_Hidroponik/blob/main/assets/forecasting_variabel_lingkungan.png?raw=true"
+        "https://github.com/Vinzzztty/V3_Forecasting_Hidroponik/blob/main/assets/forecasting_variabel_lingkungan.png?raw=true"
     )
     # Data for K-Fold Results
     k_fold_data = {
@@ -228,7 +228,7 @@ def main():
     st.markdown(
         """
         Hasil evaluasi menunjukkan bahwa model Prophet mengungguli model ARIMA dalam metrik RMSE dan MAE.
-        Prophet memiliki RMSE (1.66) dan MAE (1.26) yang lebih rendah dibandingkan dengan ARIMA, yang memiliki RMSE (3.19) dan MAE (2.14).
+        Prophet memiliki RMSE (1.84) dan MAE (1.54) yang lebih rendah dibandingkan dengan ARIMA, yang memiliki RMSE (3.19) dan MAE (2.14).
         Hal ini menunjukkan bahwa model Prophet memberikan prediksi yang lebih akurat.
         """
     )
